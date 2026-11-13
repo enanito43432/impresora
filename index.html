@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema Kiosco de Impresión Autoservicio</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Family Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+
+  <!-- NOTIFICACIÓN TIPO TOAST -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 ease-out bg-slate-800 border-l-4 border-blue-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none">
+    <div id="toastIcon" class="text-2xl">ℹ️</div>
+    <div>
+      <div id="toastTitle" class="font-bold text-sm">Notificación</div>
+      <div id="toastMessage" class="text-xs text-slate-300">Mensaje de sistema</div>
+    </div>
+  </div>
+
+  <!-- HEADER NAVEGACIÓN PRINCIPAL -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-4">
+        <div class="bg-gradient-to-tr from-blue-600 to-indigo-500 p-2.5 rounded-xl shadow-md shadow-blue-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">AUTOSERVICIO IMPRESIÓN</h1>
+          <div class="flex items-center space-x-2 mt-0.5">
+            <span class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+              Base de Datos SQLite (100% Sin JSON)
+            </span>
+            <span id="sessionBadge" class="hidden text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+              SESIÓN: <span id="sessionIdText" class="text-blue-400"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTONES DE NAVEGACIÓN -->
+      <div class="flex items-center space-x-3">
+        <button id="btnNavKiosk" onclick="switchToKiosk()" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/20 active:scale-95">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+          <span>Vista Kiosco</span>
+        </button>
+        <button id="btnNavAdmin" onclick="handleAdminNavClick()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm px-4 py-2.5 rounded-xl border border-slate-700 transition active:scale-95">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          <span>Panel Admin</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex-grow flex flex-col justify-center">
+
+    <!-- ========================================== -->
+    <!-- VISTA 1: KIOSCO DE IMPRESIÓN               -->
+    <!-- ========================================== -->
+    <main id="kioskView" class="w-full my-auto py-4">
+
+      <!-- PASO 1: BIENVENIDA -->
+      <div id="stepWelcome" class="flex flex-col items-center justify-center text-center max-w-2xl mx-auto py-12 space-y-8">
+        <div class="relative">
+          <div class="w-36 h-36 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/20 border border-blue-400/30">
+            <svg class="w-20 h-20 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          </div>
+          <div class="absolute -bottom-2 -right-2 bg-emerald-500 border-4 border-slate-950 p-2 rounded-full shadow-lg">
+            <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <h2 class="text-3xl sm:text-4xl font-black tracking-tight text-white">Conecte su Pendrive USB</h2>
+          <p class="text-slate-400 text-base max-w-md mx-auto">Inserte su memoria para escanear archivos PDF y comenzar el proceso de impresión autoservicio.</p>
+        </div>
+
+        <button onclick="handleStartSession()" class="group relative inline-flex items-center justify-center px-8 py-5 text-xl font-black text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-xl shadow-blue-600/30 hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition-all duration-200">
+          <span>SIMULAR CONEXIÓN USB</span>
+          <svg class="w-6 h-6 ml-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </button>
+      </div>
+
+      <!-- PASO 2: SELECCIÓN DE ARCHIVOS -->
+      <div id="stepUsbConnected" class="hidden max-w-4xl mx-auto space-y-6">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+              <span>💾 Archivos Detectados en USB</span>
+            </h2>
+            <p class="text-sm text-slate-400">Haga clic sobre un documento para configurarlo</p>
+          </div>
+          <button onclick="resetToWelcome()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-2 rounded-lg border border-slate-700 transition">
+            Eyectar USB
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Archivo 1 -->
+          <button onclick="handleSelectFile('Proyecto_Final_2026.pdf', 14, 2800000)" class="group bg-slate-900 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/80 p-6 rounded-2xl text-left flex flex-col justify-between h-52 transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-blue-500/10 active:scale-95">
+            <div class="flex items-start justify-between w-full">
+              <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 bg-slate-800 rounded-full text-slate-400 group-hover:text-blue-400">PDF</span>
+            </div>
+            <div>
+              <div class="text-lg font-bold text-slate-100 truncate group-hover:text-blue-400 transition">Proyecto_Final_2026.pdf</div>
+              <div class="flex justify-between items-center mt-2 text-xs text-slate-400">
+                <span>Páginas: <strong class="text-slate-200">14</strong></span>
+                <span>2.8 MB</span>
+              </div>
+            </div>
+          </button>
+
+          <!-- Archivo 2 -->
+          <button onclick="handleSelectFile('Curriculum_Vitae.pdf', 2, 450000)" class="group bg-slate-900 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/80 p-6 rounded-2xl text-left flex flex-col justify-between h-52 transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-blue-500/10 active:scale-95">
+            <div class="flex items-start justify-between w-full">
+              <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 bg-slate-800 rounded-full text-slate-400 group-hover:text-blue-400">PDF</span>
+            </div>
+            <div>
+              <div class="text-lg font-bold text-slate-100 truncate group-hover:text-blue-400 transition">Curriculum_Vitae.pdf</div>
+              <div class="flex justify-between items-center mt-2 text-xs text-slate-400">
+                <span>Páginas: <strong class="text-slate-200">2</strong></span>
+                <span>0.45 MB</span>
+              </div>
+            </div>
+          </button>
+
+          <!-- Archivo 3 -->
+          <button onclick="handleSelectFile('Contrato_Alquiler_Firmado.pdf', 6, 1200000)" class="group bg-slate-900 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/80 p-6 rounded-2xl text-left flex flex-col justify-between h-52 transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-blue-500/10 active:scale-95">
+            <div class="flex items-start justify-between w-full">
+              <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 bg-slate-800 rounded-full text-slate-400 group-hover:text-blue-400">PDF</span>
+            </div>
+            <div>
+              <div class="text-lg font-bold text-slate-100 truncate group-hover:text-blue-400 transition">Contrato_Alquiler_Firmado.pdf</div>
+              <div class="flex justify-between items-center mt-2 text-xs text-slate-400">
+                <span>Páginas: <strong class="text-slate-200">6</strong></span>
+                <span>1.2 MB</span>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- PASO 3: CONFIGURACIÓN E IMPRESIÓN -->
+      <div id="stepConfig" class="hidden max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Panel Izquierdo: Opciones -->
+        <div class="lg:col-span-7 bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>⚙️ Configuración de Impresión</span>
+            </h3>
+            <button onclick="showStep('stepUsbConnected')" class="text-xs text-slate-400 hover:text-white underline">
+              Cambiar Archivo
+            </button>
+          </div>
+
+          <!-- SELECCIÓN PERSONALIZADA DE PÁGINAS -->
+          <div class="space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div class="flex justify-between items-center">
+              <label class="block text-xs uppercase tracking-wider font-bold text-blue-400">Selección de Páginas a Imprimir</label>
+              <button onclick="selectAllPages()" id="btnPagesAll" class="text-xs px-2.5 py-1 rounded-lg border font-semibold transition bg-blue-600 text-white border-blue-500">Todas</button>
+            </div>
+
+            <div class="relative">
+              <input id="inputPageSelection" type="text" placeholder="Ej: 1,3-5,8" oninput="handlePageInput()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition font-mono">
+            </div>
+
+            <div id="pageSelectionError" class="text-red-400 text-xs font-semibold hidden flex items-center gap-1">
+              <span>⚠️</span> <span id="pageSelectionErrorTxt">Error en rango de páginas</span>
+            </div>
+
+            <div class="flex justify-between items-center text-[11px] text-slate-400">
+              <span>Formatos válidos: <code class="text-slate-300">1-5</code> o <code class="text-slate-300">1,3,8</code> o <code class="text-slate-300">1,3-6,10</code></span>
+              <span id="txtSelectedPagesSummary" class="font-bold text-emerald-400">0 páginas elegidas</span>
+            </div>
+          </div>
+
+          <!-- Selección Modo Color -->
+          <div class="space-y-2">
+            <label class="block text-xs uppercase tracking-wider font-bold text-slate-400">Modo de Color</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button id="btnColorBW" onclick="setColorMode('BW')" class="p-4 rounded-2xl border font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all">
+                <span class="text-lg">🔲</span>
+                <span>Blanco y Negro</span>
+                <span id="rateLabelBW" class="text-[10px] opacity-75 font-normal">--</span>
+              </button>
+              <button id="btnColorColor" onclick="setColorMode('COLOR')" class="p-4 rounded-2xl border font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all">
+                <span class="text-lg">🎨</span>
+                <span>Color</span>
+                <span id="rateLabelColor" class="text-[10px] opacity-75 font-normal">--</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selección Cara -->
+          <div class="space-y-2">
+            <label class="block text-xs uppercase tracking-wider font-bold text-slate-400">Formato de Cara</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button id="btnDuplexFalse" onclick="setDuplex(false)" class="p-4 rounded-2xl border font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all">
+                <span class="text-lg">📄</span>
+                <span>Una sola cara</span>
+                <span class="text-[10px] opacity-75 font-normal">1 hoja por página</span>
+              </button>
+              <button id="btnDuplexTrue" onclick="setDuplex(true)" class="p-4 rounded-2xl border font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all">
+                <span class="text-lg">📑</span>
+                <span>Doble cara</span>
+                <span class="text-[10px] opacity-75 font-normal">Ahorra papel</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cantidad de Copias -->
+          <div class="space-y-2">
+            <label class="block text-xs uppercase tracking-wider font-bold text-slate-400">Cantidad de Juegos / Copias</label>
+            <div class="flex items-center justify-between bg-slate-950 p-2 rounded-2xl border border-slate-800">
+              <button onclick="changeCopies(-1)" class="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 font-bold text-xl flex items-center justify-center transition text-slate-200">-</button>
+              <span id="txtCopies" class="text-2xl font-black px-6 text-white">1</span>
+              <button onclick="changeCopies(1)" class="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 font-bold text-xl flex items-center justify-center transition text-slate-200">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Derecho: Cotización y Resumen -->
+        <div class="lg:col-span-5 bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl flex flex-col justify-between space-y-6">
+          <div class="space-y-5">
+            <h3 class="text-xl font-bold border-b border-slate-800 pb-4 text-white">Resumen de Cotización</h3>
+            
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between text-slate-400">
+                <span>Archivo seleccionado:</span>
+                <span id="txtFileName" class="font-semibold text-slate-200 truncate max-w-[180px]">--</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Páginas en PDF original:</span>
+                <span id="txtDocPages" class="font-semibold text-slate-200">0</span>
+              </div>
+              <div class="flex justify-between text-blue-400 font-medium">
+                <span>Páginas elegidas (x1 juego):</span>
+                <span id="txtSelectedPagesCount" class="font-bold">0</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Total de páginas a imprimir:</span>
+                <span id="txtTotalPages" class="font-semibold text-slate-200">0</span>
+              </div>
+              <div class="flex justify-between text-emerald-400 font-medium pt-2 border-t border-slate-800">
+                <span>Hojas físicas de papel:</span>
+                <span id="txtTotalSheets" class="font-bold text-base">0</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800/80 space-y-1">
+              <span class="text-xs uppercase tracking-wider font-bold text-slate-500">Monto Total Calculado</span>
+              <div class="text-4xl font-black text-emerald-400 tracking-tight" id="txtTotalPrice">$0.00</div>
+              <p class="text-[11px] text-slate-500 italic">Tarifas leídas directamente de SQLite.</p>
+            </div>
+          </div>
+
+          <button id="btnContinuePayment" onclick="handleConfirmConfig()" class="w-full py-5 px-6 rounded-2xl font-black text-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition shadow-lg shadow-emerald-600/20 text-white flex items-center justify-center space-x-2">
+            <span>CONTINUAR AL PAGO</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- PASO 4: CONFIRMACIÓN Y PAGO -->
+      <div id="stepSummary" class="hidden max-w-xl mx-auto bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+        <div class="text-center space-y-2 border-b border-slate-800 pb-5">
+          <div class="inline-flex p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400 mb-2">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          </div>
+          <h2 class="text-2xl font-bold text-white">Terminal de Pago Kiosco</h2>
+          <p class="text-xs text-slate-400">Verifique los detalles antes de autorizar la transacción</p>
+        </div>
+
+        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 text-sm">
+          <div class="flex justify-between border-b border-slate-800/60 pb-2">
+            <span class="text-slate-400">Documento:</span>
+            <span id="sumFileName" class="font-bold text-slate-200">--</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800/60 pb-2">
+            <span class="text-slate-400">Páginas seleccionadas:</span>
+            <span id="sumSelectedPages" class="font-mono text-xs text-blue-400 font-bold max-w-[200px] truncate">--</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800/60 pb-2">
+            <span class="text-slate-400">Modo de Color / Formato:</span>
+            <span id="sumMode" class="font-bold text-slate-200">--</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800/60 pb-2">
+            <span class="text-slate-400">Juegos (Copias):</span>
+            <span id="sumCopies" class="font-bold text-slate-200">1</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800/60 pb-2">
+            <span class="text-slate-400">Páginas Totales / Hojas Papel:</span>
+            <span id="sumPagesSheets" class="font-bold text-slate-200">0 / 0</span>
+          </div>
+          <div class="flex justify-between items-center pt-2">
+            <span class="text-base font-bold text-slate-300">Total a Cobrar:</span>
+            <span id="sumTotalPrice" class="text-3xl font-black text-emerald-400">$0.00</span>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <button onclick="showStep('stepConfig')" class="w-1/3 py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 active:scale-95 transition text-sm">
+            Volver
+          </button>
+          <button onclick="handleProcessPayment()" class="w-2/3 py-4 rounded-xl font-black bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 active:scale-95 transition text-base">
+            PAGAR AHORA
+          </button>
+        </div>
+      </div>
+
+      <!-- PASO 5: PROCESANDO PAGO -->
+      <div id="stepPayment" class="hidden text-center space-y-6 my-auto max-w-md mx-auto py-12">
+        <div class="relative w-24 h-24 mx-auto">
+          <div class="absolute inset-0 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin"></div>
+          <div class="absolute inset-3 rounded-full border-4 border-indigo-500/20 border-b-indigo-500 animate-spin" style="animation-direction: reverse;"></div>
+          <div class="absolute inset-0 flex items-center justify-center text-2xl">💳</div>
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-2xl font-bold text-white">Procesando Cobro...</h2>
+          <p class="text-sm text-slate-400">Comunicando con la terminal de débito/crédito...</p>
+        </div>
+      </div>
+
+      <!-- PASO 6: IMPRIMIENDO Y CORTANDO PDF -->
+      <div id="stepPrinting" class="hidden max-w-lg mx-auto text-center space-y-6 my-auto py-8 bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl">
+        <div class="w-16 h-16 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto text-3xl animate-pulse">
+          🖨️
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-2xl font-bold text-white">Imprimiendo Documento PDF</h2>
+          <p class="text-sm text-slate-400">Cortando páginas seleccionadas e imprimiendo documento real...</p>
+        </div>
+
+        <div class="w-full bg-slate-950 h-6 rounded-full overflow-hidden p-1 border border-slate-800">
+          <div id="printProgressBar" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300 w-0"></div>
+        </div>
+
+        <div id="printProgressTxt" class="text-sm font-mono font-bold text-slate-300">0% Completado</div>
+      </div>
+
+      <!-- PASO 7: FINALIZADO -->
+      <div id="stepDone" class="hidden text-center space-y-8 my-auto max-w-md mx-auto py-12 bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl">
+        <div class="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-4xl text-emerald-400">
+          ✓
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-3xl font-black text-white">¡Impresión Exitosa!</h2>
+          <p class="text-slate-400 text-sm">Se han impreso únicamente las páginas seleccionadas. Retire sus impresiones y su memoria USB.</p>
+        </div>
+
+        <button onclick="resetToWelcome()" class="w-full py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-white transition active:scale-95 border border-slate-700">
+          FINALIZAR Y RETIRAR USB
+        </button>
+      </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- VISTA 2: PANEL DE ADMINISTRACIÓN           -->
+    <!-- ========================================== -->
+    <main id="adminView" class="hidden w-full space-y-8 py-4">
+      
+      <!-- ENCABEZADO DEL PANEL -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-6 rounded-3xl border border-slate-800 gap-4 shadow-xl">
+        <div>
+          <h2 class="text-2xl font-black text-white flex items-center gap-2">
+            <span class="text-amber-400">⚙️</span>
+            <span>PANEL DE ADMINISTRACIÓN</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Control de Tarifas y Registro de Auditoría Servidor (SQLite3 - Sin JSON)</p>
+        </div>
+        
+        <button onclick="handleAdminLogout()" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 text-xs font-bold px-4 py-2.5 rounded-xl border border-red-500/30 transition flex items-center space-x-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+          <span>🔒 CERRAR SESIÓN ADMIN</span>
+        </button>
+      </div>
+
+      <!-- MÉTRICAS DE NEGOCIO (CARDS) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-md">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Recaudación Total</span>
+            <span class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-sm">💵</span>
+          </div>
+          <div id="adminRevenue" class="text-3xl font-black text-emerald-400 mt-3">$0.00</div>
+          <p class="text-[11px] text-slate-500 mt-1">Ingresos guardados en SQLite</p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-md">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Trabajos Completados</span>
+            <span class="p-2 bg-blue-500/10 text-blue-400 rounded-lg text-sm">🖨️</span>
+          </div>
+          <div id="adminJobs" class="text-3xl font-black text-blue-400 mt-3">0</div>
+          <p class="text-[11px] text-slate-500 mt-1">Transacciones procesadas</p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-md">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Hojas Físicas Usadas</span>
+            <span class="p-2 bg-amber-500/10 text-amber-400 rounded-lg text-sm">📄</span>
+          </div>
+          <div id="adminSheets" class="text-3xl font-black text-amber-400 mt-3">0</div>
+          <p class="text-[11px] text-slate-500 mt-1">Consumo de papel impreso</p>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-md">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Páginas Impresas</span>
+            <span class="p-2 bg-purple-500/10 text-purple-400 rounded-lg text-sm">📚</span>
+          </div>
+          <div id="adminPages" class="text-3xl font-black text-purple-400 mt-3">0</div>
+          <p class="text-[11px] text-slate-500 mt-1">Volumen de páginas impresas</p>
+        </div>
+      </div>
+
+      <!-- SECCIÓN CONFIGURACIÓN DE PRECIOS -->
+      <div class="bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl space-y-6">
+        <div class="border-b border-slate-800 pb-4 flex justify-between items-center">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>🏷️ Modificación de Tarifas por Página</span>
+          </h3>
+          <span class="text-xs text-slate-400">Actualiza base de datos SQLite</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">Precio Blanco y Negro ($ / pág)</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+              <input id="inputPriceBW" type="number" step="1" min="1" class="w-full bg-slate-950 border border-slate-700 rounded-2xl pl-8 pr-4 py-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 transition">
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">Precio Color ($ / pág)</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+              <input id="inputPriceColor" type="number" step="1" min="1" class="w-full bg-slate-950 border border-slate-700 rounded-2xl pl-8 pr-4 py-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 transition">
+            </div>
+          </div>
+        </div>
+
+        <button onclick="saveAdminPrices()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm px-8 py-4 rounded-xl transition shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center space-x-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+          <span>GUARDAR TARIFAS EN SQLITE</span>
+        </button>
+      </div>
+
+      <!-- TABLA DE VENTAS / REGISTRO DE AUDITORÍA -->
+      <div class="bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-white">📋 Historial de Ventas (Auditoría en SQLite)</h3>
+            <p class="text-xs text-slate-400">Listado de transacciones registradas</p>
+          </div>
+          <button onclick="clearDatabase()" class="bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-300 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition">
+            🗑️ Vaciar Historial
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+              <tr>
+                <th class="p-3.5 rounded-l-xl">ID Transacción</th>
+                <th class="p-3.5">Archivo</th>
+                <th class="p-3.5">Páginas Elegidas</th>
+                <th class="p-3.5">Modo</th>
+                <th class="p-3.5">Formato</th>
+                <th class="p-3.5">Copias</th>
+                <th class="p-3.5">Hojas</th>
+                <th class="p-3.5">Monto Total</th>
+                <th class="p-3.5 rounded-r-xl">Fecha / Hora</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL DE SOLICITUD DE CLAVE ADMINISTRATIVA -->
+  <div id="modalPassword" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-md w-full space-y-6 shadow-2xl">
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+          🔒
+        </div>
+        <h3 class="text-2xl font-black text-white">Acceso Administrativo</h3>
+        <p class="text-xs text-slate-400">Ingrese la clave validada por el Servidor mediante Hash</p>
+      </div>
+
+      <div class="space-y-2">
+        <input id="inputPassword" type="password" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-4 text-center text-2xl font-bold tracking-widest text-white focus:outline-none focus:border-blue-500 transition">
+        <p id="passwordError" class="text-red-400 text-center text-xs font-bold hidden">Contraseña incorrecta o bloqueada por intentos.</p>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="closePasswordModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-xl transition text-sm">
+          Cancelar
+        </button>
+        <button onclick="verifyPassword()" class="w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-blue-600/20 text-sm">
+          Ingresar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-3 px-6 text-center text-xs text-slate-500">
+    Sistema Autoservicio de Impresión • SQLite Backend v3.0 (Cero JSON)
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- LÓGICA JAVASCRIPT SIN DEPENDENCIAS JSON    -->
+  <!-- ========================================== -->
+  <script>
+    // ESTADO DE LA APLICACIÓN
+    let state = {
+      sessionId: null,
+      selectedFile: null,
+      pageSelection: '',
+      pageList: [],
+      colorMode: 'BW',
+      duplex: false,
+      copies: 1,
+      rates: { BW: 50, COLOR: 150 },
+      quote: { totalPages: 0, totalSheets: 0, totalPrice: 0 }
+    };
+
+    function showToast(title, message, icon = 'ℹ️') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastTitle').innerText = title;
+      document.getElementById('toastMessage').innerText = message;
+      document.getElementById('toastIcon').innerText = icon;
+
+      toast.classList.remove('translate-x-full');
+      setTimeout(() => { toast.classList.add('translate-x-full'); }, 3500);
+    }
+
+    // Cargar Tarifas desde el servidor (Texto plano separado por coma)
+    function fetchPricesFromServer(callback) {
+      fetch('/api/prices')
+        .then(res => res.text())
+        .then(text => {
+          if (!text.startsWith("ERROR")) {
+            const parts = text.split(',');
+            state.rates.BW = parseFloat(parts[0]);
+            state.rates.COLOR = parseFloat(parts[1]);
+            document.getElementById('rateLabelBW').innerText = `$${state.rates.BW} / pág`;
+            document.getElementById('rateLabelColor').innerText = `$${state.rates.COLOR} / pág`;
+            if (callback) callback();
+          }
+        });
+    }
+
+    // NAVEGACIÓN VISTAS
+    function switchToKiosk() {
+      document.getElementById('kioskView').classList.remove('hidden');
+      document.getElementById('adminView').classList.add('hidden');
+      document.getElementById('btnNavKiosk').className = "flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/20 active:scale-95";
+      document.getElementById('btnNavAdmin').className = "flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm px-4 py-2.5 rounded-xl border border-slate-700 transition active:scale-95";
+    }
+
+    function switchToAdmin() {
+      document.getElementById('kioskView').classList.add('hidden');
+      document.getElementById('adminView').classList.remove('hidden');
+      document.getElementById('btnNavKiosk').className = "flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm px-4 py-2.5 rounded-xl border border-slate-700 transition active:scale-95";
+      document.getElementById('btnNavAdmin').className = "flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/20 active:scale-95";
+      loadAdminDashboard();
+    }
+
+    function handleAdminNavClick() {
+      fetch('/api/admin/check-auth')
+        .then(res => res.text())
+        .then(status => {
+          if (status === "AUTHENTICATED") {
+            switchToAdmin();
+          } else {
+            promptAdminPassword();
+          }
+        });
+    }
+
+    function promptAdminPassword() {
+      document.getElementById('inputPassword').value = '';
+      document.getElementById('passwordError').classList.add('hidden');
+      document.getElementById('modalPassword').classList.remove('hidden');
+      setTimeout(() => document.getElementById('inputPassword').focus(), 100);
+    }
+
+    function closePasswordModal() {
+      document.getElementById('modalPassword').classList.add('hidden');
+    }
+
+    function verifyPassword() {
+      const pass = document.getElementById('inputPassword').value;
+      const params = new URLSearchParams();
+      params.append('password', pass);
+
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      })
+      .then(res => res.text())
+      .then(respText => {
+        if (respText.startsWith('OK')) {
+          closePasswordModal();
+          switchToAdmin();
+          showToast('Acceso Permitido', 'Bienvenido al Panel de Administración', '🔑');
+        } else {
+          document.getElementById('passwordError').innerText = respText;
+          document.getElementById('passwordError').classList.remove('hidden');
+        }
+      });
+    }
+
+    document.getElementById('inputPassword').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') verifyPassword();
+    });
+
+    function handleAdminLogout() {
+      fetch('/api/admin/logout', { method: 'POST' })
+        .then(() => {
+          switchToKiosk();
+          showToast('Sesión Cerrada', 'Ha salido del área administrativa', '🔒');
+        });
+    }
+
+    // KIOSCO STEPS
+    function showStep(stepId) {
+      const steps = ['stepWelcome', 'stepUsbConnected', 'stepConfig', 'stepSummary', 'stepPayment', 'stepPrinting', 'stepDone'];
+      steps.forEach(id => document.getElementById(id).classList.add('hidden'));
+      document.getElementById(stepId).classList.remove('hidden');
+    }
+
+    function handleStartSession() {
+      state.sessionId = 'USB-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      document.getElementById('sessionIdText').innerText = state.sessionId;
+      document.getElementById('sessionBadge').classList.remove('hidden');
+      showStep('stepUsbConnected');
+      showToast('USB Conectado', 'Lectura de archivos completada', '💾');
+    }
+
+    function handleSelectFile(filename, pages, fileSize) {
+      state.selectedFile = { filename, pages, fileSize };
+      state.colorMode = 'BW';
+      state.duplex = false;
+      state.copies = 1;
+      
+      fetchPricesFromServer(() => {
+        selectAllPages();
+        updateConfigUI();
+        showStep('stepConfig');
+      });
+    }
+
+    function selectAllPages() {
+      if (!state.selectedFile) return;
+      const val = state.selectedFile.pages === 1 ? '1' : `1-${state.selectedFile.pages}`;
+      document.getElementById('inputPageSelection').value = val;
+      handlePageInput();
+    }
+
+    function handlePageInput() {
+      const inputVal = document.getElementById('inputPageSelection').value.trim();
+      state.pageSelection = inputVal;
+
+      if (!inputVal) {
+        showPageError('Debe ingresar al menos una página o rango.');
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.append('filename', state.selectedFile.filename);
+      params.append('pageSelection', inputVal);
+
+      fetch('/api/validate-pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      })
+      .then(res => res.text())
+      .then(respText => {
+        if (respText.startsWith('OK|')) {
+          const parts = respText.split('|');
+          const count = parseInt(parts[1], 10);
+          state.pageList = parts[2].split(',');
+
+          hidePageError();
+          document.getElementById('txtSelectedPagesSummary').innerText = `${count} páginas elegidas`;
+          calculateQuote();
+        } else {
+          const errorMsg = respText.replace('ERROR: ', '');
+          showPageError(errorMsg);
+        }
+      });
+    }
+
+    function showPageError(msg) {
+      document.getElementById('pageSelectionErrorTxt').innerText = msg;
+      document.getElementById('pageSelectionError').classList.remove('hidden');
+      document.getElementById('btnContinuePayment').disabled = true;
+      document.getElementById('btnContinuePayment').classList.add('opacity-50', 'cursor-not-allowed');
+      state.quote = { totalPages: 0, totalSheets: 0, totalPrice: 0 };
+      document.getElementById('txtTotalPrice').innerText = '$0.00';
+    }
+
+    function hidePageError() {
+      document.getElementById('pageSelectionError').classList.add('hidden');
+      document.getElementById('btnContinuePayment').disabled = false;
+      document.getElementById('btnContinuePayment').classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function setColorMode(mode) {
+      state.colorMode = mode;
+      updateConfigUI();
+      calculateQuote();
+    }
+
+    function setDuplex(isDuplex) {
+      state.duplex = isDuplex;
+      updateConfigUI();
+      calculateQuote();
+    }
+
+    function changeCopies(delta) {
+      state.copies = Math.max(1, state.copies + delta);
+      updateConfigUI();
+      calculateQuote();
+    }
+
+    function updateConfigUI() {
+      const bwBtn = document.getElementById('btnColorBW');
+      const colorBtn = document.getElementById('btnColorColor');
+
+      if (state.colorMode === 'BW') {
+        bwBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20';
+        colorBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700';
+      } else {
+        colorBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20';
+        bwBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700';
+      }
+
+      const dFalseBtn = document.getElementById('btnDuplexFalse');
+      const dTrueBtn = document.getElementById('btnDuplexTrue');
+
+      if (!state.duplex) {
+        dFalseBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20';
+        dTrueBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700';
+      } else {
+        dTrueBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20';
+        dFalseBtn.className = 'p-4 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 transition-all bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700';
+      }
+
+      document.getElementById('txtCopies').innerText = state.copies;
+    }
+
+    function calculateQuote() {
+      if (!state.selectedFile || state.pageList.length === 0) return;
+
+      const countSelected = state.pageList.length;
+      const unitPrice = state.colorMode === 'BW' ? state.rates.BW : state.rates.COLOR;
+
+      const totalPages = countSelected * state.copies;
+      const sheetsPerCopy = state.duplex ? Math.ceil(countSelected / 2) : countSelected;
+      const totalSheets = sheetsPerCopy * state.copies;
+      const totalPrice = totalPages * unitPrice;
+
+      state.quote = { totalPages, totalSheets, totalPrice };
+
+      document.getElementById('txtFileName').innerText = state.selectedFile.filename;
+      document.getElementById('txtDocPages').innerText = state.selectedFile.pages;
+      document.getElementById('txtSelectedPagesCount').innerText = countSelected;
+      document.getElementById('txtTotalPages').innerText = totalPages;
+      document.getElementById('txtTotalSheets').innerText = totalSheets;
+      document.getElementById('txtTotalPrice').innerText = '$' + totalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+    }
+
+    function handleConfirmConfig() {
+      document.getElementById('sumFileName').innerText = state.selectedFile.filename;
+      document.getElementById('sumSelectedPages').innerText = state.pageSelection;
+      document.getElementById('sumMode').innerText = (state.colorMode === 'BW' ? 'Blanco y Negro' : 'Color') + ' • ' + (state.duplex ? 'Doble Cara' : 'Una Cara');
+      document.getElementById('sumCopies').innerText = state.copies;
+      document.getElementById('sumPagesSheets').innerText = `${state.quote.totalPages} págs / ${state.quote.totalSheets} hojas`;
+      document.getElementById('sumTotalPrice').innerText = '$' + state.quote.totalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+
+      showStep('stepSummary');
+    }
+
+    function handleProcessPayment() {
+      showStep('stepPayment');
+
+      const params = new URLSearchParams();
+      params.append('filename', state.selectedFile.filename);
+      params.append('pageSelection', state.pageSelection);
+      params.append('colorMode', state.colorMode);
+      params.append('duplex', state.duplex);
+      params.append('copies', state.copies);
+
+      fetch('/api/process-print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      })
+      .then(res => res.text())
+      .then(respText => {
+        if (respText.startsWith('OK|')) {
+          startPrintingProgress();
+        } else {
+          showToast('Error en la transacción', respText, '⚠️');
+          showStep('stepSummary');
+        }
+      });
+    }
+
+    function startPrintingProgress() {
+      showStep('stepPrinting');
+      let progress = 0;
+      const bar = document.getElementById('printProgressBar');
+      const txt = document.getElementById('printProgressTxt');
+
+      const interval = setInterval(() => {
+        progress += 20;
+        bar.style.width = progress + '%';
+        txt.innerText = progress + '% Completado';
+
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => showStep('stepDone'), 400);
+        }
+      }, 300);
+    }
+
+    function resetToWelcome() {
+      state.sessionId = null;
+      state.selectedFile = null;
+      document.getElementById('sessionBadge').classList.add('hidden');
+      showStep('stepWelcome');
+    }
+
+    // PANEL DE ADMINISTRACIÓN (PARSER DE TEXTO SIN JSON)
+    function loadAdminDashboard() {
+      fetch('/api/admin/dashboard-data')
+        .then(res => res.text())
+        .then(textData => {
+          if (textData.startsWith('ERROR')) {
+            showToast('Error', textData, '⚠️');
+            return;
+          }
+
+          const lines = textData.trim().split('\n');
+          let totalRevenue = 0;
+          let totalSheets = 0;
+          let totalPages = 0;
+          let jobsCount = 0;
+
+          const tbody = document.getElementById('adminTableBody');
+          tbody.innerHTML = '';
+
+          lines.forEach(line => {
+            if (!line) return;
+            const parts = line.split('|');
+            const type = parts[0];
+
+            if (type === 'PRICES') {
+              document.getElementById('inputPriceBW').value = parts[1];
+              document.getElementById('inputPriceColor').value = parts[2];
+            } else if (type === 'SALE') {
+              jobsCount++;
+              const txId = parts[1];
+              const filename = parts[2];
+              const colorMode = parts[3];
+              const duplex = parts[4] === '1' ? 'Doble Cara' : 'Una Cara';
+              const copies = parseInt(parts[5], 10);
+              const printedPages = parts[6];
+              const tPages = parseInt(parts[7], 10);
+              const tSheets = parseInt(parts[8], 10);
+              const tPrice = parseFloat(parts[9]);
+              const date = parts[10];
+
+              totalRevenue += tPrice;
+              totalPages += tPages;
+              totalSheets += tSheets;
+
+              const tr = document.createElement('tr');
+              tr.className = 'hover:bg-slate-800/40 transition-colors';
+              tr.innerHTML = `
+                <td class="p-3.5 font-mono text-xs text-blue-400 font-bold">${txId}</td>
+                <td class="p-3.5 font-bold text-slate-200">${filename}</td>
+                <td class="p-3.5 font-mono text-xs text-indigo-400 font-bold">${printedPages}</td>
+                <td class="p-3.5">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${colorMode === 'BW' ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-purple-950 text-purple-300 border border-purple-800'}">
+                    ${colorMode}
+                  </span>
+                </td>
+                <td class="p-3.5 text-xs text-slate-400">${duplex}</td>
+                <td class="p-3.5 text-xs text-slate-300 font-bold">${copies}</td>
+                <td class="p-3.5 text-xs text-amber-400 font-bold">${tSheets}</td>
+                <td class="p-3.5 text-sm text-emerald-400 font-black">$${tPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                <td class="p-3.5 text-xs text-slate-500">${date}</td>
+              `;
+              tbody.appendChild(tr);
+            }
+          });
+
+          if (jobsCount === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="9" class="p-8 text-center text-slate-500 italic">
+                  No hay transacciones guardadas en la Base de Datos SQLite.
+                </td>
+              </tr>
+            `;
+          }
+
+          document.getElementById('adminRevenue').innerText = '$' + totalRevenue.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+          document.getElementById('adminJobs').innerText = jobsCount;
+          document.getElementById('adminSheets').innerText = totalSheets;
+          document.getElementById('adminPages').innerText = totalPages;
+        });
+    }
+
+    function saveAdminPrices() {
+      const bw = document.getElementById('inputPriceBW').value;
+      const color = document.getElementById('inputPriceColor').value;
+
+      const params = new URLSearchParams();
+      params.append('bw', bw);
+      params.append('color', color);
+
+      fetch('/api/admin/prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      })
+      .then(res => res.text())
+      .then(respText => {
+        if (respText.startsWith('OK')) {
+          showToast('Guardado Exitoso', 'Tarifas guardadas en SQLite', '💾');
+          fetchPricesFromServer();
+        } else {
+          showToast('Error', respText, '⚠️');
+        }
+      });
+    }
+
+    function clearDatabase() {
+      if (confirm('¿Confirma eliminar todo el historial de ventas guardado en la base de datos SQLite?')) {
+        fetch('/api/admin/clear-history', { method: 'POST' })
+          .then(res => res.text())
+          .then(respText => {
+            loadAdminDashboard();
+            showToast('Base de Datos Limpia', 'Se eliminó el historial de SQLite', '🗑️');
+          });
+      }
+    }
+
+    window.onload = function() {
+      fetchPricesFromServer();
+    };
+  </script>
+</body>
+</html>
